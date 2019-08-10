@@ -99,7 +99,7 @@ function SWEP:PrimaryAttack()
 					
 			self:SetNextPrimaryFire( CurTime() + self.Primary.Delay )
 					
-			local inflictor = ents.Create("weapon_ttt_freezer")
+			local inflictor = ents.Create("weapon_ttt_ice_knife")
 			local Owner = self.Owner
 	
 			timer.Create("SomeSimpleIDNameAgain" .. tostring(self.Owner:SteamID()), 0.2, 15, function()
