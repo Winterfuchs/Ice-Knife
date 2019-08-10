@@ -45,31 +45,37 @@ end
 
 function ENT:HitPlayer(other, tr)
 
-  
+	if SERVER then
+		local dmg = DamageInfo()
+		dmg:SetDamage(12)
+		dmg:SetAttacker(self:GetOwner())
+		dmg:SetInflictor(self)
+		dmg:SetDamageForce(self:EyeAngles():Forward())
+		dmg:SetDamagePosition(self:GetPos())
+		dmg:SetDamageType(DMG_SLASH)
 
-  
-  if SERVER then
-      local dmg = DamageInfo()
-      dmg:SetDamage(12)
-      dmg:SetAttacker(self:GetOwner())
-      dmg:SetInflictor(self)
-      dmg:SetDamageForce(self:EyeAngles():Forward())
-      dmg:SetDamagePosition(self:GetPos())
-      dmg:SetDamageType(DMG_SLASH)
+		timer.Create ("ThisIDNameIsFancy" .. tostring(self.Owner:SteamID()), 5,1 , function()
+			if other:IsPlayer() then 
+				other:Freeze(false) 
+				if TTT2 then STATUS:RemoveStatus(other, "ttt_iceknife_sidebar_icon") end
+			end 
+		end)
+						
+		if other:IsPlayer() and not other:IsSpec() then 
+			other:Freeze(true)
+			if TTT2 then 
+				STATUS:AddStatus(other, "ttt_iceknife_sidebar_icon")
+			end
+			other:RemoveFlags(32768)
+		end
+		  
+		local ang = Angle(-28,0,0) + tr.Normal:Angle()
+		ang:RotateAroundAxis(ang:Right(), -90)
+		other:DispatchTraceAttack(dmg, self:GetPos() + ang:Forward() * 3, other:GetPos())
 
-	  timer.Create ("ThisIDNameIsFancy" .. tostring(self.Owner:SteamID()), 5,1 , function() if other:IsPlayer() then other:Freeze(false) end end)
-			   
-					if other:IsPlayer() and not other:IsSpec() then other:Freeze(true)
-					other:RemoveFlags(32768)
-					end
-	  
-      local ang = Angle(-28,0,0) + tr.Normal:Angle()
-      ang:RotateAroundAxis(ang:Right(), -90)
-      other:DispatchTraceAttack(dmg, self:GetPos() + ang:Forward() * 3, other:GetPos())
-
-      if not self.Weaponised then
-         self:BecomeWeaponDelayed()
-      end
+		if not self.Weaponised then
+		 self:BecomeWeaponDelayed()
+		end
    end
    
    -- As a thrown knife, after we hit a target we can never hit one again.
