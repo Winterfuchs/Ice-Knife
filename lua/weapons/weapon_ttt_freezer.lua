@@ -140,6 +140,64 @@ function SWEP:PrimaryAttack()
 		end
 	end
 end
+
+function SWEP:SecondaryAttack()
+   self.Weapon:SetNextPrimaryFire( CurTime() + self.Primary.Delay )
+   
+
+
+   self.Weapon:SendWeaponAnim( ACT_VM_MISSCENTER )
+
+   if SERVER then
+      local ply = self.Owner
+      if not IsValid(ply) then return end
+
+      ply:SetAnimation( PLAYER_ATTACK1 )
+
+      local ang = ply:EyeAngles()
+
+      if ang.p < 90 then
+         ang.p = -10 + ang.p * ((90 + 10) / 90)
+      else
+         ang.p = 360 - ang.p
+         ang.p = -10 + ang.p * -((90 + 10) / 90)
+      end
+
+      local vel = math.Clamp((90 - ang.p) * 5.5, 550, 800)
+
+      local vfw = ang:Forward()
+      local vrt = ang:Right()
+
+      local src = ply:GetPos() + (ply:Crouching() and ply:GetViewOffsetDucked() or ply:GetViewOffset())
+
+      src = src + (vfw * 1) + (vrt * 3)
+
+      local thr = vfw * vel + ply:GetVelocity()
+
+      local knife_ang = Angle(-28,0,0) + ang
+      knife_ang:RotateAroundAxis(knife_ang:Right(), -90)
+
+      local knife = ents.Create("ttt_ice_knife_proj")
+      if not IsValid(knife) then return end
+      knife:SetPos(src)
+      knife:SetAngles(knife_ang)
+
+      knife:Spawn()
+
+      knife.Damage = self.Primary.Damage
+
+      knife:SetOwner(ply)
+
+      local phys = knife:GetPhysicsObject()
+      if IsValid(phys) then
+         phys:SetVelocity(thr)
+         phys:AddAngleVelocity(Vector(0, 1500, 0))
+         phys:Wake()
+      end
+
+      self:Remove()
+   end
+end
 	
 	
 if CLIENT then
@@ -170,6 +228,3 @@ function DieTimer()
 	timer.Destroy("SomeSimpleIDNameAgain")
 end
 hook.Add("TTTPrepareRound", "KillThisTimer", DieTimer)
-
-function SWEP:SecondaryAttack()
-end
