@@ -1,6 +1,4 @@
-
 AddCSLuaFile()
-
 
 resource.AddFile("models/weapons/ice_knife/c_ice_knife.mdl")
 resource.AddFile("models/weapons/ice_knife/w_ice_knife.mdl")
@@ -10,10 +8,11 @@ resource.AddFile("materials/vgui/ttt/icon_iceknife.vmt")
 resource.AddFile("materials/vgui/ttt/icon_iceknife.vtf")
 resource.AddFile("materials/vgui/ttt/hud_icon_iceknife.png")
 
+local allowSecondaryAttack = CreateConVar( "ttt_ice_knife_allow_secondary", 1 , {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE, FCVAR_REPLICATED}, "Allow the Ice Knife to be thrown?" )
+
 if SERVER then
 	resource.AddWorkshop( "477143906" )
 end
-
 
 SWEP.HoldType = "knife"
 
@@ -141,65 +140,64 @@ function SWEP:PrimaryAttack()
 	end
 end
 
-function SWEP:SecondaryAttack()
-   self.Weapon:SetNextPrimaryFire( CurTime() + self.Primary.Delay )
-   
+if allowSecondaryAttack:GetBool() then
+	function SWEP:SecondaryAttack()
+	   self.Weapon:SetNextPrimaryFire( CurTime() + self.Primary.Delay )
+	   
+	   self.Weapon:SendWeaponAnim( ACT_VM_MISSCENTER )
 
+	   if SERVER then
+		  local ply = self.Owner
+		  if not IsValid(ply) then return end
 
-   self.Weapon:SendWeaponAnim( ACT_VM_MISSCENTER )
+		  ply:SetAnimation( PLAYER_ATTACK1 )
 
-   if SERVER then
-      local ply = self.Owner
-      if not IsValid(ply) then return end
+		  local ang = ply:EyeAngles()
 
-      ply:SetAnimation( PLAYER_ATTACK1 )
+		  if ang.p < 90 then
+			 ang.p = -10 + ang.p * ((90 + 10) / 90)
+		  else
+			 ang.p = 360 - ang.p
+			 ang.p = -10 + ang.p * -((90 + 10) / 90)
+		  end
 
-      local ang = ply:EyeAngles()
+		  local vel = math.Clamp((90 - ang.p) * 5.5, 550, 800)
 
-      if ang.p < 90 then
-         ang.p = -10 + ang.p * ((90 + 10) / 90)
-      else
-         ang.p = 360 - ang.p
-         ang.p = -10 + ang.p * -((90 + 10) / 90)
-      end
+		  local vfw = ang:Forward()
+		  local vrt = ang:Right()
 
-      local vel = math.Clamp((90 - ang.p) * 5.5, 550, 800)
+		  local src = ply:GetPos() + (ply:Crouching() and ply:GetViewOffsetDucked() or ply:GetViewOffset())
 
-      local vfw = ang:Forward()
-      local vrt = ang:Right()
+		  src = src + (vfw * 1) + (vrt * 3)
 
-      local src = ply:GetPos() + (ply:Crouching() and ply:GetViewOffsetDucked() or ply:GetViewOffset())
+		  local thr = vfw * vel + ply:GetVelocity()
 
-      src = src + (vfw * 1) + (vrt * 3)
+		  local knife_ang = Angle(-28,0,0) + ang
+		  knife_ang:RotateAroundAxis(knife_ang:Right(), -90)
 
-      local thr = vfw * vel + ply:GetVelocity()
+		  local knife = ents.Create("ttt_ice_knife_proj")
+		  if not IsValid(knife) then return end
+		  knife:SetPos(src)
+		  knife:SetAngles(knife_ang)
 
-      local knife_ang = Angle(-28,0,0) + ang
-      knife_ang:RotateAroundAxis(knife_ang:Right(), -90)
+		  knife:Spawn()
 
-      local knife = ents.Create("ttt_ice_knife_proj")
-      if not IsValid(knife) then return end
-      knife:SetPos(src)
-      knife:SetAngles(knife_ang)
+		  knife.Damage = self.Primary.Damage
 
-      knife:Spawn()
+		  knife:SetOwner(ply)
 
-      knife.Damage = self.Primary.Damage
+		  local phys = knife:GetPhysicsObject()
+		  if IsValid(phys) then
+			 phys:SetVelocity(thr)
+			 phys:AddAngleVelocity(Vector(0, 1500, 0))
+			 phys:Wake()
+		  end
 
-      knife:SetOwner(ply)
+		  self:Remove()
+	   end
+	end
+end	
 
-      local phys = knife:GetPhysicsObject()
-      if IsValid(phys) then
-         phys:SetVelocity(thr)
-         phys:AddAngleVelocity(Vector(0, 1500, 0))
-         phys:Wake()
-      end
-
-      self:Remove()
-   end
-end
-	
-	
 if CLIENT then
 	function SWEP:DrawHUD()
      
